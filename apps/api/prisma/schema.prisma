@@ -1,0 +1,136 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+model User {
+  id          String   @id @default(cuid())
+  email       String?  @unique
+  phone       String?  @unique
+  role        Role     @default(NORMAL)
+  createdAt   DateTime @default(now())
+  positions   Position[]
+  trades      Trade[]
+  memberships Membership[]
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  plan      Plan
+  provider  Provider
+  status    String   @default("active")
+  startedAt DateTime @default(now())
+  renewedAt DateTime?
+}
+
+model Instrument {
+  symbol   String  @id
+  isin     String?
+  name     String
+  sector   String?
+  logoUrl  String?
+  active   Boolean @default(true)
+  ohlc     OHLC[]
+  actions  CorporateAction[]
+}
+
+model OHLC {
+  id        String   @id @default(cuid())
+  symbol    String
+  timeframe String
+  ts        DateTime
+  o         Decimal
+  h         Decimal
+  l         Decimal
+  c         Decimal
+  v         BigInt?
+  instrument Instrument @relation(fields: [symbol], references: [symbol])
+
+  @@index([symbol, timeframe, ts])
+}
+
+model CorporateAction {
+  id       String   @id @default(cuid())
+  symbol   String
+  type     ActionType
+  exDate   DateTime
+  amount   Decimal?
+  ratio    Decimal?
+  instrument Instrument @relation(fields: [symbol], references: [symbol])
+
+  @@index([symbol, exDate])
+}
+
+model Portfolio {
+  id           String   @id @default(cuid())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
+  cashBalance  Decimal  @default(3000)
+  totalEquity  Decimal  @default(0)
+  plRealized   Decimal  @default(0)
+  plUnrealized Decimal  @default(0)
+  updatedAt    DateTime @default(now())
+  positions    Position[]
+}
+
+model Position {
+  id       String   @id @default(cuid())
+  user     User     @relation(fields: [userId], references: [id])
+  userId   String
+  symbol   String
+  qty      Decimal  @default(0)
+  avgCost  Decimal  @default(0)
+
+  @@index([userId, symbol])
+}
+
+model Trade {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  symbol     String
+  side       Side
+  qty        Decimal
+  priceExec  Decimal
+  ts         DateTime @default(now())
+
+  @@index([userId, ts])
+}
+
+model Competition {
+  id        String   @id @default(cuid())
+  name      String
+  startTs   DateTime
+  endTs     DateTime
+  status    String   @default("upcoming")
+  entries   LeaderboardEntry[]
+}
+
+model LeaderboardEntry {
+  id            String      @id @default(cuid())
+  competition   Competition @relation(fields: [competitionId], references: [id])
+  competitionId String
+  user          User        @relation(fields: [userId], references: [id])
+  userId        String
+  score         Decimal     @default(0)
+  rank          Int?
+  updatedAt     DateTime    @default(now())
+
+  @@index([competitionId, userId])
+}
+
+model Lesson {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  bodyMd    String
+  isPremium Boolean  @default(false)
+  locale    String   @default("tr")
+  order     Int      @default(0)
+}
+
+enum Role { NORMAL PREMIUM LIFETIME }
+enum Provider { PLAY APPSTORE WEB }
+enum Plan { PREMIUM LIFETIME }
+enum Side { BUY SELL }
+enum ActionType { DIVIDEND SPLIT OTHER }
