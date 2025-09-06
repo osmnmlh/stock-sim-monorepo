@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { createChart, ISeriesApi } from "lightweight-charts";
+import { createChart, type ISeriesApi, type IChartApi } from "lightweight-charts";
 import { useEffect, useRef } from "react";
 
 type Row = { ts: string; o: number; h: number; l: number; c: number; v?: number | null };
@@ -8,7 +8,7 @@ type Row = { ts: string; o: number; h: number; l: number; c: number; v?: number 
 export default function PriceChart({ rows, height = 360 }: { rows: Row[]; height?: number }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
+  const chartRef = useRef<IChartApi | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -19,12 +19,13 @@ export default function PriceChart({ rows, height = 360 }: { rows: Row[]; height
       timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
       grid: { vertLines: { visible: false }, horzLines: { visible: false } },
       crosshair: { mode: 0 },
-    });
+    }) as IChartApi;
+
     const series = chart.addCandlestickSeries();
     seriesRef.current = series;
     chartRef.current = chart;
 
-    const data = rows.map(r => ({
+    const data = rows.map((r) => ({
       time: (new Date(r.ts).getTime() / 1000) as any,
       open: Number(r.o),
       high: Number(r.h),
